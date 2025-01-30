@@ -1,0 +1,87 @@
+name: Snyk Project Import
+
+on:
+  workflow_dispatch: # Manual trigger
+  schedule:
+    - cron: '0 0 * * *' # Daily at 00:00 UTC (adjust as needed)
+  push:
+    branches:
+      - main # Or your default branch
+
+jobs:
+  import_projects:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code (if needed for local imports)
+        uses: actions/checkout@v3
+        with:
+          path: my-repo # Optional: Specify a path if needed
+
+      - name: Set up Python (if needed for other scripting)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x' # Or your preferred version
+
+      - name: Install required tools (e.g., jq for JSON processing)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Set up Snyk CLI (if needed)
+        uses: snyk/actions/setup@v3
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Run Snyk API import script
+        env:
+          SNYK_API_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
+          SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
+          INTEGRATION_ID: ${{ secrets.SNYK_INTEGRATION_ID }}
+
+        run: |
+          #!/bin/bash
+
+          # --- Configuration (using environment variables) ---
+          SNYK_API_TOKEN="$SNYK_API_TOKEN"
+          SNYK_ORG_ID="$SNYK_ORG_ID"
+          INTEGRATION_ID="$SNYK_INTEGRATION_ID"
+
+
+          # --- Helper function to import a target ---
+          import_target() {
+            local target_json="$1"
+            curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
+                 -H "Content-Type: application/json" \
+                 -d "${target_json}" \
+                 "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
+          }
+
+          # --- Example Targets ---
+
+          # 1. GitHub/GHE Repository (Specific Branch)
+          # target_branch='{
+          #   "target": {
+          #     "url": "https://${GHE_HOSTNAME:-github.com}/owner/repo", # Handles GHE or GitHub
+          #     "branch": "main",
+          #     "integration": {
+          #       "url": "${GHE_API_URL:-}" # Only include for GHE
+          #     }
+          #   }
+          # }'
+
+          # 2. GitHub/GHE Repository (Specific Commit)
+           target_commit='{
+            "target": {
+              "url": "https://${GHE_HOSTNAME:-github.com}/owner/repo", # Handles GHE or GitHub
+              "commit": $(git rev-parse --short "$GITHUB_SHA"), # Replace with a valid commit hash
+            }
+          }'
+          # ... (Add other targets as needed) ...
+
+          # --- Import the targets ---
+          echo "Importing target (branch)..."
+          import_target "$target_branch"
+          echo "Importing target (commit)..."
+          import_target "$target_commit"
+
+          echo "Import scripts finished."
