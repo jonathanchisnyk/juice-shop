@@ -12,20 +12,20 @@ jobs:
   import_projects:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code (if needed for local imports)
-        uses: actions/checkout@v3
-        with:
-          path: my-repo # Optional: Specify a path if needed
+      # - name: Checkout code (if needed for local imports)
+      #   uses: actions/checkout@v3
+      #   with:
+      #     path: my-repo # Optional: Specify a path if needed
 
-      - name: Set up Python (if needed for other scripting)
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x' # Or your preferred version
+      # - name: Set up Python (if needed for other scripting)
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: '3.x' # Or your preferred version
 
-      - name: Install required tools (e.g., jq for JSON processing)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+      # - name: Install required tools (e.g., jq for JSON processing)
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y jq
 
       - name: Set up Snyk CLI (if needed)
         uses: snyk/actions/setup@v3
