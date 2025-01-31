@@ -72,7 +72,7 @@ jobs:
           # 2. GitHub/GHE Repository (Specific Commit)
            target_commit='{
             "target": {
-              "url": "https://${GHE_HOSTNAME:-github.com}/owner/repo", # Handles GHE or GitHub
+              "url": "https://github.com/jonathanchisnyk/juice-shop", # Handles GHE or GitHub
               "commit": $(git rev-parse --short "$GITHUB_SHA"), # Replace with a valid commit hash
             }
           }'
