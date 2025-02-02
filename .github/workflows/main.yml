@@ -44,7 +44,7 @@ jobs:
             curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                  -H "Content-Type: application/json" \
                  -d "${target_json}" \
-                 "https://api.snyk.io/rest/org/${ORG_ID}/integrations/${INTEGRATION_ID}/import"
+                 "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
           }
 
           # --- Target Definitions (GitHub Cloud) ---
