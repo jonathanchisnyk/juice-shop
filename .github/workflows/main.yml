@@ -41,7 +41,7 @@ jobs:
           import_target() {
             local target_json="$1"
             echo "$target_json"
-            echo "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
+            # echo "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
             curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                  -H "Content-Type: application/json" \
                  -d "${target_json}" \
@@ -66,7 +66,7 @@ jobs:
           # --- Import and Rename (same as before) ---
           import_and_rename() {
             local target_json="$1"
-            # local default_project_name=$(echo "$target_json")
+            local default_project_name=$(echo "$target_json")
             # # default_project_name="${default_project_name//\//-}" # Replace / with - for name
             # echo "$target_json"
             # # echo "$default_project_name"
