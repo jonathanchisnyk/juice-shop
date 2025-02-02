@@ -1,5 +1,4 @@
 name: Snyk Project Import (GitHub Cloud)
-
 on:
   workflow_dispatch: # Manual trigger
   schedule:
