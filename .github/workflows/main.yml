@@ -1,4 +1,5 @@
-name: Snyk Project Import (GitHub Cloud)
+name: Snyk Project Import
+
 on:
   workflow_dispatch: # Manual trigger
   schedule:
@@ -19,7 +20,7 @@ jobs:
       - name: Set up Python (if needed for other scripting)
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x' # Or your preferred version
+          python-version: '3.x'
 
       - name: Install jq (for JSON processing)
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -27,49 +28,45 @@ jobs:
       - name: Run Snyk API import script
         env:
           SNYK_API_TOKEN: ${{ secrets.SNYK_TOKEN }}
-          SNYK_ORG_ID: ${{ secrets.ORG_ID }}
+          SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
           INTEGRATION_ID: ${{ secrets.SNYK_INTEGRATION_ID }} # GitHub Integration ID
           PROJECT_NAME: ${{ github.repository }} # Default project name (owner/repo)
         run: |
           #!/bin/bash
 
           SNYK_API_TOKEN="$SNYK_API_TOKEN"
-          SNYK_ORG_ID="$SNYK_ORG_ID"
+          SNYK_ORG_ID="$ORG_ID"
           INTEGRATION_ID="$INTEGRATION_ID"
           PROJECT_NAME="$PROJECT_NAME"
 
           import_target() {
             local target_json="$1"
-            echo "$target_json"
-            # echo "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
             curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                  -H "Content-Type: application/json" \
                  -d "${target_json}" \
                  "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
           }
 
-          # --- Target Definitions (GitHub Cloud) ---
+          # --- Target Definitions (GitHub Cloud - Adapt as needed) ---
           github_target='{
             "target": {
-              "url": "https://github.com/${{ github.repository }}", # Use GitHub Actions context
-              "branch": "main" # Or ${{ github.ref_name }} for the triggering branch
+              "url": "https://github.com/${{ github.repository }}",
+              "branch": "main" # Or ${{ github.ref_name }}
             }
           }'
 
           github_commit_target='{
             "target": {
               "url": "https://github.com/${{ github.repository }}",
-              "commit": "${{ github.sha }}" # Use GitHub Actions context for commit hash
+              "commit": "${{ github.sha }}"
             }
           }'
 
-          # --- Import and Rename (same as before) ---
+          # --- Import and Rename (Improved error handling) ---
           import_and_rename() {
             local target_json="$1"
-            local default_project_name=$(echo "$target_json")
-            # # default_project_name="${default_project_name//\//-}" # Replace / with - for name
-            # echo "$target_json"
-            # # echo "$default_project_name"
+            local default_project_name=$(echo "$target_json" | jq -r '.target.url | rtrimstr("https://") | rtrimstr("http://")')
+            default_project_name="${default_project_name//\//-}"
 
             response=$(import_target "$target_json")
             status_code=$(echo "$response" | jq -r '.statusCode')
@@ -83,13 +80,19 @@ jobs:
 
             PROJECT_ID=$(curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                             "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/projects" | \
-                            jq -r ".projects | select(.name == \"$target_json\").id")
+                            jq -r ".projects | select(.name == \"$default_project_name\").id")
 
             if [[ -n "$PROJECT_ID" ]]; then
-              curl -X PATCH -s -H "Authorization: token ${SNYK_API_TOKEN}" \
+              rename_response=$(curl -X PATCH -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                    -H "Content-Type: application/json" \
                    -d "{\"name\": \"$PROJECT_NAME\"}" \
-                   "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/project/${PROJECT_ID}"
+                   "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/project/${PROJECT_ID}")
+
+              rename_status_code=$(echo "$rename_response" | jq -r '.statusCode')
+              if [[ "$rename_status_code" -ne 200 ]]; then
+                echo "Error renaming project: $rename_response"
+                exit 1
+              fi
               echo "Project renamed to $PROJECT_NAME"
             else
               echo "Error: Could not find project ID after import."
@@ -97,7 +100,7 @@ jobs:
             fi
           }
 
-          # Import and rename each target
+          # --- Import and rename each target ---
           import_and_rename "$github_target"
           import_and_rename "$github_commit_target"
 
