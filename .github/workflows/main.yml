@@ -11,15 +11,15 @@ jobs:
   import_projects:
     runs-on: ubuntu-latest
     steps:
-      # - name: Checkout code (if needed for local imports)
-      #   uses: actions/checkout@v3
-      #   with:
-      #     path: my-repo # Optional: Specify a path if needed
+      - name: Checkout code (if needed for local imports)
+        uses: actions/checkout@v3
+        with:
+          path: my-repo # Optional: Specify a path if needed
 
-      # - name: Set up Python (if needed for other scripting)
-      #   uses: actions/setup-python@v4
-      #   with:
-      #     python-version: '3.x' # Or your preferred version
+      - name: Set up Python (if needed for other scripting)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x' # Or your preferred version
 
       - name: Install jq (for JSON processing)
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -66,13 +66,12 @@ jobs:
           # --- Import and Rename (same as before) ---
           import_and_rename() {
             local target_json="$1"
-            local default_project_name="$(echo "$target_json")"
+            local default_project_name=$(echo "$target_json")
             # default_project_name="${default_project_name//\//-}" # Replace / with - for name
             # echo "$target_json"
             # echo "$default_project_name"
 
             response=$(import_target "$target_json")
-            echo "$response"
             status_code=$(echo "$response" | jq -r '.statusCode')
 
             if [[ "$status_code" -ne 200 ]]; then
