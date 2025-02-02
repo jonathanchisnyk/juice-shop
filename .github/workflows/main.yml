@@ -41,6 +41,7 @@ jobs:
           import_target() {
             local target_json="$1"
             echo "$target_json"
+            echo "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
             curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                  -H "Content-Type: application/json" \
                  -d "${target_json}" \
