@@ -70,6 +70,7 @@ jobs:
             echo "$default_project_name"
 
             response=$(import_target "$target_json")
+            echo "$response"
             status_code=$(echo "$response" | jq -r '.statusCode')
 
             if [[ "$status_code" -ne 200 ]]; then
