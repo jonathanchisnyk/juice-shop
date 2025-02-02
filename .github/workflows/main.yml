@@ -41,6 +41,7 @@ jobs:
 
           import_target() {
             local target_json="$1"            
+            echo "${target_json}"
             curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                  -H "Content-Type: application/json" \
                  -d "${target_json}" \
@@ -67,7 +68,7 @@ jobs:
             local target_json="$1"
             local default_project_name=$(echo "$target_json" | jq -r '.target.url | rtrimstr("https://") | rtrimstr("http://")')
             default_project_name="${default_project_name//\//-}"
-            echo "$target_json"
+            echo ${target_json}
             response=$(import_target "$target_json")
             status_code=$(echo "$response" | jq -r '.statusCode')
 
