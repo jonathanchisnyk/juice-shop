@@ -66,9 +66,10 @@ jobs:
           # --- Import and Rename (same as before) ---
           import_and_rename() {
             local target_json="$1"
-            local default_project_name=$(echo "$target_json")
-            echo "$target_json"
-            # echo "$default_project_name"
+            # local default_project_name=$(echo "$target_json")
+            # # default_project_name="${default_project_name//\//-}" # Replace / with - for name
+            # echo "$target_json"
+            # # echo "$default_project_name"
 
             response=$(import_target "$target_json")
             status_code=$(echo "$response" | jq -r '.statusCode')
