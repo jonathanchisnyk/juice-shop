@@ -1,4 +1,4 @@
-name: Snyk Project Import
+name: Snyk Project Import (GitHub Cloud)
 
 on:
   workflow_dispatch: # Manual trigger
@@ -22,66 +22,80 @@ jobs:
       #   with:
       #     python-version: '3.x' # Or your preferred version
 
-      # - name: Install required tools (e.g., jq for JSON processing)
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y jq
-
-      # - name: Set up Snyk CLI (if needed)
-      #   uses: snyk/actions/setup@v3
-      #   env:
-      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Install jq (for JSON processing)
+        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Run Snyk API import script
         env:
-          SNYK_API_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
-          SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
-          INTEGRATION_ID: ${{ secrets.SNYK_INTEGRATION_ID }}
-
+          SNYK_API_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_ORG_ID: ${{ secrets.ORG_ID }}
+          INTEGRATION_ID: ${{ secrets.SNYK_INTEGRATION_ID }} # GitHub Integration ID
+          PROJECT_NAME: ${{ github.repository }} # Default project name (owner/repo)
         run: |
           #!/bin/bash
 
-          # --- Configuration (using environment variables) ---
           SNYK_API_TOKEN="$SNYK_API_TOKEN"
           SNYK_ORG_ID="$SNYK_ORG_ID"
-          INTEGRATION_ID="$SNYK_INTEGRATION_ID"
+          INTEGRATION_ID="$INTEGRATION_ID"
+          PROJECT_NAME="$PROJECT_NAME"
 
-
-          # --- Helper function to import a target ---
           import_target() {
             local target_json="$1"
             curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
                  -H "Content-Type: application/json" \
                  -d "${target_json}" \
-                 "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/integrations/${INTEGRATION_ID}/import"
+                 "https://api.snyk.io/rest/org/${ORG_ID}/integrations/${INTEGRATION_ID}/import"
           }
 
-          # --- Example Targets ---
-
-          # 1. GitHub/GHE Repository (Specific Branch)
-          # target_branch='{
-          #   "target": {
-          #     "url": "https://${GHE_HOSTNAME:-github.com}/owner/repo", # Handles GHE or GitHub
-          #     "branch": "main",
-          #     "integration": {
-          #       "url": "${GHE_API_URL:-}" # Only include for GHE
-          #     }
-          #   }
-          # }'
-
-          # 2. GitHub/GHE Repository (Specific Commit)
-           target_commit='{
+          # --- Target Definitions (GitHub Cloud) ---
+          github_target='{
             "target": {
-              "url": "https://github.com/jonathanchisnyk/juice-shop", # Handles GHE or GitHub
-              "commit": $(git rev-parse --short "$GITHUB_SHA"), # Replace with a valid commit hash
+              "url": "https://github.com/${{ github.repository }}", # Use GitHub Actions context
+              "branch": "main" # Or ${{ github.ref_name }} for the triggering branch
             }
           }'
-          # ... (Add other targets as needed) ...
 
-          # --- Import the targets ---
-          echo "Importing target (branch)..."
-          import_target "$target_branch"
-          echo "Importing target (commit)..."
-          import_target "$target_commit"
+          github_commit_target='{
+            "target": {
+              "url": "https://github.com/${{ github.repository }}",
+              "commit": "${{ github.sha }}" # Use GitHub Actions context for commit hash
+            }
+          }'
 
-          echo "Import scripts finished."
+          # --- Import and Rename (same as before) ---
+          import_and_rename() {
+            local target_json="$1"
+            local default_project_name=$(echo "$target_json" | jq -r '.target.url | rtrimstr("https://") | rtrimstr("http://")')
+            default_project_name="${default_project_name//\//-}" # Replace / with - for name
+
+            response=$(import_target "$target_json")
+            status_code=$(echo "$response" | jq -r '.statusCode')
+
+            if [[ "$status_code" -ne 200 ]]; then
+              echo "Error importing target: $response"
+              exit 1
+            fi
+
+            sleep 5 # Adjust sleep time as needed
+
+            PROJECT_ID=$(curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
+                            "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/projects" | \
+                            jq -r ".projects | select(.name == \"$default_project_name\").id")
+
+            if [[ -n "$PROJECT_ID" ]]; then
+              curl -X PATCH -s -H "Authorization: token ${SNYK_API_TOKEN}" \
+                   -H "Content-Type: application/json" \
+                   -d "{\"name\": \"$PROJECT_NAME\"}" \
+                   "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/project/${PROJECT_ID}"
+              echo "Project renamed to $PROJECT_NAME"
+            else
+              echo "Error: Could not find project ID after import."
+              exit 1
+            fi
+          }
+
+          # Import and rename each target
+          import_and_rename "$github_target"
+          import_and_rename "$github_commit_target"
+
+          echo "Import and rename scripts finished."
