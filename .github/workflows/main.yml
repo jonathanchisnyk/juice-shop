@@ -65,7 +65,6 @@ jobs:
           # --- Import and Rename (same as before) ---
           import_and_rename() {
             local target_json="$1"
-            echo "$target_json"
             local default_project_name=$(echo "$target_json" | jq -r '.target.url | rtrimstr("https://") | rtrimstr("http://")')
             # default_project_name="${default_project_name//\//-}" # Replace / with - for name
 
