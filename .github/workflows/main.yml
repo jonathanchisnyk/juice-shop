@@ -69,7 +69,7 @@ jobs:
             # default_project_name="${default_project_name//\//-}"
             echo "$target_json"
             # response=$(import_target "$target_json")
-            # status_code=$(echo "$response" | jq -r '.statusCode')
+            status_code=$(echo "$response" | jq -r '.statusCode')
 
             if [[ "$status_code" -ne 200 ]]; then
               echo "Error importing target: $response"
