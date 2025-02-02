@@ -62,37 +62,37 @@ jobs:
             }
           }'
 
-          # # --- Import and Rename (same as before) ---
-          # import_and_rename() {
-          #   local target_json="$1"
-          #   local default_project_name=$(echo "$target_json" | jq -r '.target.url | rtrimstr("https://") | rtrimstr("http://")')
-          #   default_project_name="${default_project_name//\//-}" # Replace / with - for name
+          # --- Import and Rename (same as before) ---
+          import_and_rename() {
+            local target_json="$1"
+            local default_project_name=$(echo "$target_json" | jq -r '.target.url | rtrimstr("https://") | rtrimstr("http://")')
+            default_project_name="${default_project_name//\//-}" # Replace / with - for name
 
-          #   response=$(import_target "$target_json")
-          #   status_code=$(echo "$response" | jq -r '.statusCode')
+            response=$(import_target "$target_json")
+            status_code=$(echo "$response" | jq -r '.statusCode')
 
-          #   if [[ "$status_code" -ne 200 ]]; then
-          #     echo "Error importing target: $response"
-          #     exit 1
-          #   fi
+            if [[ "$status_code" -ne 200 ]]; then
+              echo "Error importing target: $response"
+              exit 1
+            fi
 
-          #   sleep 5 # Adjust sleep time as needed
+            sleep 5 # Adjust sleep time as needed
 
-          #   PROJECT_ID=$(curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
-          #                   "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/projects" | \
-          #                   jq -r ".projects | select(.name == \"$default_project_name\").id")
+            PROJECT_ID=$(curl -s -H "Authorization: token ${SNYK_API_TOKEN}" \
+                            "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/projects" | \
+                            jq -r ".projects | select(.name == \"$default_project_name\").id")
 
-          #   if [[ -n "$PROJECT_ID" ]]; then
-          #     curl -X PATCH -s -H "Authorization: token ${SNYK_API_TOKEN}" \
-          #          -H "Content-Type: application/json" \
-          #          -d "{\"name\": \"$PROJECT_NAME\"}" \
-          #          "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/project/${PROJECT_ID}"
-          #     echo "Project renamed to $PROJECT_NAME"
-          #   else
-          #     echo "Error: Could not find project ID after import."
-          #     exit 1
-          #   fi
-          # }
+            if [[ -n "$PROJECT_ID" ]]; then
+              curl -X PATCH -s -H "Authorization: token ${SNYK_API_TOKEN}" \
+                   -H "Content-Type: application/json" \
+                   -d "{\"name\": \"$PROJECT_NAME\"}" \
+                   "https://api.snyk.io/rest/org/${SNYK_ORG_ID}/project/${PROJECT_ID}"
+              echo "Project renamed to $PROJECT_NAME"
+            else
+              echo "Error: Could not find project ID after import."
+              exit 1
+            fi
+          }
 
           # Import and rename each target
           import_and_rename "$github_target"
