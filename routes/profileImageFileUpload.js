@@ -22,7 +22,7 @@ module.exports = function fileUpload () {
           if (err) logger.warn('Error opening file: ' + err.message)
           fs.write(fd, buffer, 0, buffer.length, null, function (err) {
             if (err) logger.warn('Error writing file: ' + err.message)
-            fs.close(fd, function () { })
+            fs.close(fd, function () { }) 
           })
         })
         models.User.findByPk(loggedInUser.data.id).then(user => {
